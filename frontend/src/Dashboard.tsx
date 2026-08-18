@@ -125,12 +125,6 @@ function Dashboard() {
       );
 
 
-      const response = await axios.get(
-        "/comentario"
-      );
-
-      setComentarios(response.data);
-
       setNovoComentario("");
 
     } catch (error) {
@@ -305,18 +299,7 @@ function Dashboard() {
                     Mensagem:
                   </strong>
 
-
-                  {/* 
-                    VULNERÁVEL A STORED XSS
-
-                    O conteúdo vindo do banco é interpretado
-                    como HTML pelo navegador.
-                  */}
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: comentario.texto
-                    }}
-                  />
+                  {comentario.texto}
 
                 </div>
 

@@ -1,5 +1,6 @@
 
 import { Request, Response } from "express";
+import xss from 'xss';
 import db from "../database";
 
 
@@ -7,7 +8,6 @@ export const criarComentario = async (
     req: Request,
     res: Response
 ) => {
-
     const {
         texto,
         usuarioId
@@ -15,14 +15,16 @@ export const criarComentario = async (
 
     const query =
         `INSERT INTO comentario (texto, usuario_id)
-         VALUES ('${texto}', '${usuarioId}')`;
-
+         VALUES ($1,$2)`;
     console.log(`Query Executada: ${query}`);
+
+    const textoLimpo = xss(texto);
 
 
     try {
 
-        await db.query(query);
+
+        await db.query(query, [textoLimpo, usuarioId]);
 
         res.status(201).json({
             message: "Comentário criado"
