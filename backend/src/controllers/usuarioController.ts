@@ -1,7 +1,49 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import db from "../database";
+import jwt from 'jsonwebtoken';
 
+const JWT_SEGREDO = process.env.JWT_SEGREDO || 'Tnlmaslkcalsdfkalj0129iT'; 
 
+export interface AuthRequest extends Request {
+    usuario?: any;
+}
+
+export const ehAdmin = (req:AuthRequest, res:Response,next:NextFunction)=>{
+    //pega o token do header
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token){
+        return res.status(401).json({
+            success: false,
+            message: "token não fornecido"
+        });
+    }
+
+    try{
+        //valida o token
+        const payload = jwt.verify(token, JWT_SEGREDO) as any;
+
+        //verifica se é admin
+        if (payload.tipo !== "admin"){
+            return res.status(403).json({
+                sucess:false,
+                message: "Acesso Negado. Usuário não é administrador"
+            });
+    
+        }
+
+        req.usuario = payload;
+
+        return next();
+    } catch (error){
+        return res.status(401).json({
+            success: false,
+            message: "Token inválido ou expirado"
+        });
+    }
+
+};
 
 export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
@@ -15,6 +57,8 @@ export const login = async (req: Request, res: Response) => {
 
     if (result.rowCount && result.rowCount > 0) {
         
+        
+
         res.json({
             success: true,
             user: result.rows[0]
