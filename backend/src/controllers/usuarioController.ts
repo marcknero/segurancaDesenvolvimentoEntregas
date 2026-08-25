@@ -57,11 +57,23 @@ export const login = async (req: Request, res: Response) => {
 
     if (result.rowCount && result.rowCount > 0) {
         
-        
+        const usuario = result.rows[0]
 
-        res.json({
+        // 1. Defina os dados que vão dentro do token
+        const payload = {
+            id: usuario.id,
+            email: usuario.email,
+            tipo: usuario.tipo_usuario_id === 1 ? "admin" : "comum"
+        };
+
+        // 2. GERAÇÃO DO TOKEN TEMPORÁRIO (Expira em 1 hora, por exemplo)
+        const token = jwt.sign(payload, JWT_SEGREDO, { expiresIn: '1h' });
+
+        // 3. Retorna o token junto com o usuário
+        return res.json({
             success: true,
-            user: result.rows[0]
+            token, // <--- O token temporário vai aqui
+            user: usuario
         });
 
     } else {
@@ -94,12 +106,15 @@ export const novoLogin = async (req: Request, res: Response) => {
         const result = await db.query(query,[email, password, nome]);
 
         const queryIdUsuario =
-            `SELECT id FROM usuario
+            `SELECT * FROM usuario
              WHERE email = $1 AND senha = $2`;
 
         console.log(`Query Executada: ${queryIdUsuario}`);
 
         const resultIdUsuario = await db.query(queryIdUsuario, [email, password]);
+        
+        // Definimos a constante aqui para usarmos abaixo sem erros
+        const usuarioCriado = resultIdUsuario.rows[0];
 
         const queryUpdateTabelaIptu =
             `UPDATE iptu
@@ -108,7 +123,7 @@ export const novoLogin = async (req: Request, res: Response) => {
 
         console.log(`Query Executada: ${queryUpdateTabelaIptu}`);
 
-        const resultUpdate = await db.query(queryUpdateTabelaIptu, [resultIdUsuario.rows[0].id, nome]);
+        const resultUpdate = await db.query(queryUpdateTabelaIptu, [usuarioCriado.id, nome]);
 
         if (
             result.rowCount &&
@@ -117,21 +132,31 @@ export const novoLogin = async (req: Request, res: Response) => {
             resultUpdate.rowCount > 0
         ) {
 
-            res.json({
-            success: true,
-            user: result.rows[0]
+            // 1. Dados para o token do novo usuário
+            const payload = {
+                id: usuarioCriado.id,
+                email: usuarioCriado.email,
+                tipo: "comum"
+            };
         
+            // 2. GERAÇÃO DO TOKEN TEMPORÁRIO (Expira em 1 hora)
+            const token = jwt.sign(payload, JWT_SEGREDO, { expiresIn: '1h' });
+
+            return res.json({
+                success: true,
+                token, // <--- Token temporário gerado no cadastro
+                user: usuarioCriado
             });
 
         } else {
-            res.status(401).json({
+            return res.status(401).json({
                 success: false,
-                message: "Falha no login"
+                message: "Falha no cadastro"
             });
         }
 
     } else {
-        res.status(404).json({
+        return res.status(404).json({
             success: false,
             message: `Nome '${nome}' não encontrado no cadastro de municipes`
         });

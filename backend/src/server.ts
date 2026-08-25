@@ -5,7 +5,6 @@ import hackerMalvadao from "./routes/hackerMalvadaoRoutes";
 
 const app = express();
 
-(global as any).segredo.Jwt='seu token aqui'
 
 app.use(express.json());
 // app.use(express.urlencoded({ extended: true }));
