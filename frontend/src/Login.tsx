@@ -17,13 +17,12 @@ function Login() {
         try {
             const response = await axios.post(
                 "/usuario/login",
-                { email, password }
+                { email, password }, {withCredentials: true}
             );
 
             if(!response.data.success) {
                 setMessage("Erro no login");
             } else {
-                localStorage.setItem("user", JSON.stringify(response.data.user));
                 navigate("/dashboard");
             }
         } catch (error: unknown){

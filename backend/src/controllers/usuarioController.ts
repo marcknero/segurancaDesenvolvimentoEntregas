@@ -1,79 +1,54 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import db from "../database";
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
+import ValidarToken from "../Services/jwtServices";
 
-const JWT_SEGREDO = process.env.JWT_SEGREDO || 'Tnlmaslkcalsdfkalj0129iT'; 
 
-export interface AuthRequest extends Request {
-    usuario?: any;
-}
+export const payloadUsuario = async (req: Request, res: Response) => {
+    const token = req.cookies.token;
 
-export const ehAdmin = (req:AuthRequest, res:Response,next:NextFunction)=>{
-    //pega o token do header
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token){
-        return res.status(401).json({
+    if (!token) {
+        res.status(401).json({
             success: false,
-            message: "token não fornecido"
+            message: "Token não fornecido"
         });
+        return;
     }
+    const payload = ValidarToken(token);
 
-    try{
-        //valida o token
-        const payload = jwt.verify(token, JWT_SEGREDO) as any;
-
-        //verifica se é admin
-        if (payload.tipo !== "admin"){
-            return res.status(403).json({
-                sucess:false,
-                message: "Acesso Negado. Usuário não é administrador"
-            });
-    
-        }
-
-        req.usuario = payload;
-
-        return next();
-    } catch (error){
-        return res.status(401).json({
+    if(!payload)
+         res.status(401).json({
             success: false,
-            message: "Token inválido ou expirado"
-        });
-    }
-
+            message: "Token inválido" });
+    return res.json({
+        success: true,
+        message: "Payload do usuário obtido com sucesso",
+        payload: payload
+    });
 };
+
 
 export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
-
+    
     const query =
         `SELECT * FROM usuario WHERE email = $1 AND senha = $2`;
 
     console.log(`Query Executada: ${query}`);
 
-    const result = await db.query(query,[email,password]);
+    const result = await db.query(query, [email, password]);
 
     if (result.rowCount && result.rowCount > 0) {
-        
-        const usuario = result.rows[0]
-
-        // 1. Defina os dados que vão dentro do token
-        const payload = {
-            id: usuario.id,
-            email: usuario.email,
-            tipo: usuario.tipo_usuario_id === 1 ? "admin" : "comum"
-        };
-
-        // 2. GERAÇÃO DO TOKEN TEMPORÁRIO (Expira em 1 hora, por exemplo)
-        const token = jwt.sign(payload, JWT_SEGREDO, { expiresIn: '1h' });
-
-        // 3. Retorna o token junto com o usuário
-        return res.json({
+        const token = jwt.sign(
+            {
+                id: result.rows[0].id,
+                nome: result.rows[0].nome,
+                email: result.rows[0].email,
+                tipo: result.rows[0].tipo_usuario_id
+            }, (global as any).segredoJwt);
+        res.cookie("token", token, { httpOnly: true, sameSite:"strict" });
+        res.json({
             success: true,
-            token, // <--- O token temporário vai aqui
-            user: usuario
         });
 
     } else {
@@ -89,41 +64,38 @@ export const novoLogin = async (req: Request, res: Response) => {
     const { email, password, nome } = req.body;
 
     const queryNomeIpuExiste =
-        `SELECT * FROM iptu WHERE nome = $1`;
+        `SELECT * FROM iptu WHERE nome = '${nome}'`;
 
     console.log(`Query Executada: ${queryNomeIpuExiste}`);
 
-    const iptuResult = await db.query(queryNomeIpuExiste,[nome]);
+    const iptuResult = await db.query(queryNomeIpuExiste);
 
     if (iptuResult.rowCount && iptuResult.rowCount > 0) {
 
         const query =
             `INSERT INTO usuario (email, senha, nome, tipo_usuario_id)
-             VALUES ($1,$2, $3, 3)`;
+             VALUES ('${email}', '${password}', '${nome}', 3)`;
 
         console.log(`Query Executada: ${query}`);
 
-        const result = await db.query(query,[email, password, nome]);
+        const result = await db.query(query);
 
         const queryIdUsuario =
-            `SELECT * FROM usuario
-             WHERE email = $1 AND senha = $2`;
+            `SELECT id FROM usuario
+             WHERE email = '${email}' AND senha = '${password}'`;
 
         console.log(`Query Executada: ${queryIdUsuario}`);
 
-        const resultIdUsuario = await db.query(queryIdUsuario, [email, password]);
-        
-        // Definimos a constante aqui para usarmos abaixo sem erros
-        const usuarioCriado = resultIdUsuario.rows[0];
+        const resultIdUsuario = await db.query(queryIdUsuario);
 
         const queryUpdateTabelaIptu =
             `UPDATE iptu
-             SET usuario_id = $1
-             WHERE nome = $2`;
+             SET usuario_id = '${resultIdUsuario.rows[0].id}'
+             WHERE nome = '${nome}'`;
 
         console.log(`Query Executada: ${queryUpdateTabelaIptu}`);
 
-        const resultUpdate = await db.query(queryUpdateTabelaIptu, [usuarioCriado.id, nome]);
+        const resultUpdate = await db.query(queryUpdateTabelaIptu);
 
         if (
             result.rowCount &&
@@ -132,31 +104,21 @@ export const novoLogin = async (req: Request, res: Response) => {
             resultUpdate.rowCount > 0
         ) {
 
-            // 1. Dados para o token do novo usuário
-            const payload = {
-                id: usuarioCriado.id,
-                email: usuarioCriado.email,
-                tipo: "comum"
-            };
+            res.json({
+            success: true,
+            user: result.rows[0]
         
-            // 2. GERAÇÃO DO TOKEN TEMPORÁRIO (Expira em 1 hora)
-            const token = jwt.sign(payload, JWT_SEGREDO, { expiresIn: '1h' });
-
-            return res.json({
-                success: true,
-                token, // <--- Token temporário gerado no cadastro
-                user: usuarioCriado
             });
 
         } else {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
-                message: "Falha no cadastro"
+                message: "Falha no login"
             });
         }
 
     } else {
-        return res.status(404).json({
+        res.status(404).json({
             success: false,
             message: `Nome '${nome}' não encontrado no cadastro de municipes`
         });
@@ -165,7 +127,22 @@ export const novoLogin = async (req: Request, res: Response) => {
 
 
 export const atualizarIptu = async (req: Request, res: Response) => {
-
+    const token = req.cookies.token;
+    const payload = ValidarToken(token);
+    if (!payload) {
+        res.status(401).json({
+            success: false,
+            message: "Token inválido"
+        });
+        return;
+    }
+    if(payload && payload.tipo !== 1) {
+        res.status(403).json({
+            success: false,
+            message: "Acesso negado. Usuário não é admin"
+        });
+        return;
+    }
     const {
         usuarioId,
         novoValor
@@ -173,13 +150,13 @@ export const atualizarIptu = async (req: Request, res: Response) => {
 
     const query =
         `UPDATE iptu
-         SET valor = $1
-         WHERE usuario_id = $2`;
+         SET valor = '${novoValor}'
+         WHERE usuario_id = '${usuarioId}'`;
 
     console.log(`Query Executada: ${query}`);
 
     try {
-        await db.query(query, [novoValor, usuarioId]);
+        await db.query(query);
 
         res.json({
             message: "IPTU atualizado"
@@ -193,22 +170,32 @@ export const atualizarIptu = async (req: Request, res: Response) => {
 };
 
 
-export const getIptuPorIdUsuario = async (
-    req: Request,
-    res: Response
-) => {
+export const getIptuPorIdUsuario = async (req: Request, res: Response) => {
+    const token = req.cookies.token;
+    if (!token) {
+        res.status(401).json({
+            success: false,
+            message: "Token não fornecido"
+        });
+        return;
+    }
+    const payload = ValidarToken(token);
+    if(!payload) {
+        res.status(401).json({
+            success: false,
+            message: "Token inválido"
+        });
+        return;
+    }
 
-    const {
-        usuarioId,
-    } = req.body;
     const query =
-        `SELECT * FROM iptu WHERE usuario_id = $1`;
+        `SELECT * FROM iptu WHERE usuario_id = '${payload.id}'`;
 
     console.log(`Query Executada: ${query}`);
 
     try {
 
-        const result = await db.query(query, [usuarioId]);
+        const result = await db.query(query);
 
         console.log(`Retorno: ${JSON.stringify(result.rows)}`);
 
@@ -257,7 +244,7 @@ export const getQRCodeOrCodBarras = async (
     res: Response
 ) => {
 
-    let tipo = req.query.tipo as string;
+    const tipo = req.query.tipo as string;
 
 
     let codigoHtml = "";
@@ -271,10 +258,6 @@ export const getQRCodeOrCodBarras = async (
 
         codigoHtml =
             `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=QRCodeDemo" />`;
-    } else {
-        tipo = "invalido";
-        codigoHtml=``;
-
     }
 
     res.send(`
@@ -282,4 +265,3 @@ export const getQRCodeOrCodBarras = async (
         ${codigoHtml}
     `);
 };
-
