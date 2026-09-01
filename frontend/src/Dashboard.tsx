@@ -26,15 +26,15 @@ function Dashboard() {
   const [htmlRetorno, setHtmlRetorno] = useState("");
 
 
-  // const handleGerenciamento = async (e: React.FormEvent) => {
-  //   e.preventDefault();
+  const handleGerenciamento = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  //   try {
-  //     navigate("/gerenciamento");
-  //   } catch {
-  //     setMessage("Erro no login");
-  //   }
-  // };
+    try {
+      navigate("/gerenciamento");
+    } catch {
+      setMessage("erro ao navegar para gerenciamento");
+    }
+  };
 
 
   useEffect(() => {
@@ -48,7 +48,8 @@ function Dashboard() {
         );
         
         if (!responsePayload.data.success) {
-          console.error("Usuário não encontrado no localStorage");
+          console.error("usuário nao autenticado.");
+          navigate("/");
           return;
         }
 
@@ -64,6 +65,9 @@ function Dashboard() {
       } catch (error) {
 
         console.error("Erro ao buscar dados do usuário", error);
+        if (axios.isAxiosError(error) && error.response?.status === 403){
+          navigate("/");
+        }
 
       }
     };
@@ -92,41 +96,28 @@ function Dashboard() {
     buscarDados();
     buscarComentarios();
 
-  }, []);
+  }, [navigate]);
 
 
   const enviarComentario = async () => {
 
     if (!novoComentario.trim()) return;
 
+    if (!user) {
+      console.error ("Usuário nao encontrado no estado")
+      return;
+    }
+
 
     try {
 
-      const usuarioStorage = localStorage.getItem("user");
-
-      if (!usuarioStorage) {
-        console.error("Usuário não encontrado");
-        return;
-      }
-
-      const usuario = JSON.parse(usuarioStorage);
-
-
-      await axios.post(
-        "/comentario",
-        {
-          texto: novoComentario,
-          usuarioId: usuario.id
-        }
-      );
-
-
-      const response = await axios.get(
-        "/comentario"
-      );
-
+      await axios.post("/comentario",{
+        texto: novoComentario,
+        usuarioId: user.id
+      },{withCredentials: true});
+      
+      const response = await axios.get("/comentario");
       setComentarios(response.data);
-
       setNovoComentario("");
 
     } catch (error) {
@@ -141,11 +132,15 @@ function Dashboard() {
 
   const buscarCodigo = async () => {
 
-    const response = await axios.get(
-      "usuario/codigo-qr-ou-barra?tipo=" + tipoCodigo
-    );
-
-    setHtmlRetorno(response.data);
+    try {
+      const response = await axios.get (
+        `/usuario/codigo-qr-ou-barra?tipo=${tipoCodigo}`,
+        {withCredentials: true}
+      );
+      setHtmlRetorno(response.data);
+    } catch (error){
+      console.error ("erro ao buscar codigo", error);
+    }
   };
 
 

@@ -1,6 +1,6 @@
 export interface RetornoPayload {
     id: any;
-    tipo: string;
+    tipo: number;
     email: string;
     nome: string;
 }
