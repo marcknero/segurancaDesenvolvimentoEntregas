@@ -24,6 +24,7 @@ function Dashboard() {
   const [novoComentario, setNovoComentario] = useState("");
   const [tipoCodigo, setTipoCodigo] = useState("codigoDeBarras");
   const [htmlRetorno, setHtmlRetorno] = useState("");
+  const [csrfToken, SetCSRFToken] = useState("");
 
 
   const handleGerenciamento = async (e: React.FormEvent) => {
@@ -54,6 +55,7 @@ function Dashboard() {
         }
 
         setUser(responsePayload.data.payload);
+        SetCSRFToken(responsePayload.data.csrfToken);
 
 
         const responseIptu = await axios.get<{ iptu: Iptuu[] }>(
@@ -112,8 +114,10 @@ function Dashboard() {
     try {
 
       await axios.post("/comentario",{
+        headers:{
+            "X-CSRF-Token": csrfToken
+        },
         texto: novoComentario,
-        usuarioId: user.id
       },{withCredentials: true});
       
       const response = await axios.get("/comentario");
