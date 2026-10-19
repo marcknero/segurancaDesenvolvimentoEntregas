@@ -17,6 +17,7 @@ function Gerenciamento() {
   const [iptus, setIptus] = useState<Iptuu[]>([]);
   const [novoValor, setNovoValor] = useState<{ [key: number]: number }>({});
   const [menuAberto, setMenuAberto] = useState(false);
+  const [tokenCsrf, setTokenCsrf] = useState("");
 
 
   useEffect(() => {
@@ -41,6 +42,7 @@ function Gerenciamento() {
         }
 
         setUser(responsePayload.data.payload);
+        setTokenCsrf(responsePayload.data.cryptoToken);
 
         const response = await axios.get<{
           iptu: Iptuu[]
@@ -80,6 +82,9 @@ function Gerenciamento() {
       await axios.post(
         "/usuario/atualizar-iptu",
         {
+          headers: {
+            "X-CSRF-Token": tokenCsrf
+        },
           usuarioId: usuarioId,
           novoValor: novoValor[usuarioId]
         }, {withCredentials: true}

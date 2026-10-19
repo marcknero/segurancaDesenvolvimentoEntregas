@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 function Login() {
     const navigate = useNavigate();
     const [isRegistering, setIsRegistering] = useState(false);
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [nome, setNome] = useState("");
@@ -22,6 +23,7 @@ function Login() {
             if(!response.data.success) {
                 setMessage("Erro no login");
             } else {
+                
                 navigate("/dashboard");
             }
         } catch (error: unknown){

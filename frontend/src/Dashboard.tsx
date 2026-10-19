@@ -6,7 +6,6 @@ import type { Iptuu } from "./Tipos/Iptuu";
 import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
-    const navigate = useNavigate();
 
   const [user, setUser] = useState<{
     id: number;
@@ -15,16 +14,16 @@ function Dashboard() {
     tipo: number;
   } | null>(null);
 
-
+  const navigate = useNavigate();
 
   const [message, setMessage] = useState("");
   const [menuAberto, setMenuAberto] = useState(false);
+  const [tokenCsrf, setTokenCsrf] = useState("");
   const [iptu, setIptu] = useState<Iptuu | null>(null);
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [tipoCodigo, setTipoCodigo] = useState("codigoDeBarras");
   const [htmlRetorno, setHtmlRetorno] = useState("");
-  const [csrfToken, SetCSRFToken] = useState("");
 
 
   const handleGerenciamento = async (e: React.FormEvent) => {
@@ -33,7 +32,7 @@ function Dashboard() {
     try {
       navigate("/gerenciamento");
     } catch {
-      setMessage("erro ao navegar para gerenciamento");
+      setMessage("Erro no login");
     }
   };
 
@@ -43,20 +42,18 @@ function Dashboard() {
     const buscarDados = async () => {
 
       try {
-        const responsePayload = await axios.get(
+        const response = await axios.get(
           "/usuario/payload-usuario",
           { withCredentials: true }
         );
         
-        if (!responsePayload.data.success) {
-          console.error("usuário nao autenticado.");
-          navigate("/");
+        if (!response.data.success) {
+          console.error("Usuário não encontrado no localStorage");
           return;
         }
 
-        setUser(responsePayload.data.payload);
-        SetCSRFToken(responsePayload.data.csrfToken);
-
+        setUser(response.data.payload);
+        setTokenCsrf(response.data.cryptoToken);
 
         const responseIptu = await axios.get<{ iptu: Iptuu[] }>(
           "usuario/iptu-por-usuario",{withCredentials: true}
@@ -67,9 +64,6 @@ function Dashboard() {
       } catch (error) {
 
         console.error("Erro ao buscar dados do usuário", error);
-        if (axios.isAxiosError(error) && error.response?.status === 403){
-          navigate("/");
-        }
 
       }
     };
@@ -98,30 +92,34 @@ function Dashboard() {
     buscarDados();
     buscarComentarios();
 
-  }, [navigate]);
+  }, []);
 
 
   const enviarComentario = async () => {
 
     if (!novoComentario.trim()) return;
 
-    if (!user) {
-      console.error ("Usuário nao encontrado no estado")
-      return;
-    }
-
 
     try {
 
-      await axios.post("/comentario",{
-        headers:{
-            "X-CSRF-Token": csrfToken
+      await axios.post(
+        "/comentario",
+        
+        {
+          headers: {
+            "X-CSRF-Token": tokenCsrf
         },
-        texto: novoComentario,
-      },{withCredentials: true});
-      
-      const response = await axios.get("/comentario");
+          texto: novoComentario
+        }
+      );
+
+
+      const response = await axios.get(
+        "/comentario"
+      );
+
       setComentarios(response.data);
+
       setNovoComentario("");
 
     } catch (error) {
@@ -136,15 +134,11 @@ function Dashboard() {
 
   const buscarCodigo = async () => {
 
-    try {
-      const response = await axios.get (
-        `/usuario/codigo-qr-ou-barra?tipo=${tipoCodigo}`,
-        {withCredentials: true}
-      );
-      setHtmlRetorno(response.data);
-    } catch (error){
-      console.error ("erro ao buscar codigo", error);
-    }
+    const response = await axios.get(
+      "usuario/codigo-qr-ou-barra?tipo=" + tipoCodigo
+    );
+
+    setHtmlRetorno(response.data);
   };
 
 
@@ -365,3 +359,4 @@ const styles = {
 
 
 export default Dashboard;
+

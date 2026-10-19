@@ -1,32 +1,29 @@
 
 import { Request, Response } from "express";
-import xss from 'xss';
 import db from "../database";
-
+import xss from "xss";
 
 
 export const criarComentario = async (
     req: Request,
     res: Response
 ) => {
+
     const {
         texto,
+        usuarioId
     } = req.body;
-
-    const payload = res.locals.payload;
-
+    let textoLimpo = xss(texto);
     const query =
         `INSERT INTO comentario (texto, usuario_id)
-         VALUES ($1,$2)`;
-    console.log(`Query Executada: ${query}`);
+         VALUES ($1, $2)`;
 
-    const textoLimpo = xss(texto);
+    console.log(`Query Executada: ${query}`);
 
 
     try {
 
-
-        await db.query(query, [textoLimpo, payload.id]);
+        await db.query(query, [texto, usuarioId]);
 
         res.status(201).json({
             message: "Comentário criado"

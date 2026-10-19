@@ -20,3 +20,4 @@ app.use("/hacker-malvadao", hackerMalvadao);
 app.listen(3001, () => {
     console.log("Servidor Vulnerável rodando na porta 3001");
 });
+

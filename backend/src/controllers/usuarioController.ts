@@ -1,15 +1,16 @@
 import { Request, Response } from "express";
 import db from "../database";
 import jwt from "jsonwebtoken";
-import ValidarToken from "../Services/jwtServices";
+import crypto from "crypto";
 
 
 export const payloadUsuario = async (req: Request, res: Response) => {
+    
     return res.json({
         success: true,
         message: "Payload do usuário obtido com sucesso",
         payload: res.locals.payload,
-        csrfToken: res.locals.csrfToken
+        cryptoToken: res.locals.csrfToken
     });
 };
 
@@ -32,11 +33,13 @@ export const login = async (req: Request, res: Response) => {
                 email: result.rows[0].email,
                 tipo: result.rows[0].tipo_usuario_id
             }, (global as any).segredoJwt);
-        res.cookie("token", token, { httpOnly: true, sameSite:"strict" });
+        res.cookie("token", token, { httpOnly: true, sameSite: "strict" });
 
+        const csrfToken = crypto.randomBytes(32).toString("hex");
+        
         res.json({
             success: true,
-            csrfToken: res.locals.csrfToken
+            cryptoToken: csrfToken
         });
 
     } else {
@@ -143,9 +146,8 @@ export const atualizarIptu = async (req: Request, res: Response) => {
 
 
 export const getIptuPorIdUsuario = async (req: Request, res: Response) => {
-    const payload = res.locals.payload;
     const query =
-        `SELECT * FROM iptu WHERE usuario_id = '${payload.id}'`;
+        `SELECT * FROM iptu WHERE usuario_id = '${res.locals.payload.id}'`;
 
     console.log(`Query Executada: ${query}`);
 
@@ -221,3 +223,4 @@ export const getQRCodeOrCodBarras = async (
         ${codigoHtml}
     `);
 };
+

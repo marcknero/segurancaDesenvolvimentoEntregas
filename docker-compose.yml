@@ -1,14 +1,14 @@
 services:
   postgres:
     image: postgres:16
-    container_name: postgres-aula
+    container_name: postgres-aula-seguranca
     restart: always
     environment:
       POSTGRES_DB: aula_db
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: senha123
     ports:
-      - "5438:5432"
+      - "5432:5432"
     networks:
       - app-network
     volumes:

@@ -1,18 +1,17 @@
 import { Router } from "express";
-import { login, atualizarIptu, payloadUsuario, novoLogin, getIptuPorIdUsuario, getQRCodeOrCodBarras, getIptus } from "../controllers/usuarioController";
-import { generateCSRFToken } from "../middleware/generate_csrfTtoken";
-import { verifyToken } from "../middleware/verify_csrfToken";
-import { authJWT } from "../middleware/authJWT";
+import { login, atualizarIptu, novoLogin, getIptuPorIdUsuario, getQRCodeOrCodBarras, getIptus, payloadUsuario } from "../controllers/usuarioController";
+import { authMiddleware } from "../middleware/authMiddleware";
+import { csrfTokenMiddleware } from "../middleware/csrfTokenMiddleware";
+import { csrfGerarTokenMiddleware as csrfGerarRecuperarTokenMiddleware } from "../middleware/csrfGerarRecuperarTokenMiddleware";
 
 const router = Router();
 
-router.post("/login", login);
-router.post("/novo-login", novoLogin);
-router.put("/atualizar-iptu",authJWT([1]), atualizarIptu);
-//interessante colocar na rota iptu por usuario um middleware para garantir que apenas usuario logado veja o proprio iptu
-router.get("/iptu-por-usuario",authJWT,getIptuPorIdUsuario);
-router.get("/codigo-qr-ou-barra",authJWT, getQRCodeOrCodBarras);
-router.get("/iptus",authJWT, getIptus);
-router.get("/payload-usuario",generateCSRFToken,authJWT, payloadUsuario)
+router.post("/login", csrfGerarRecuperarTokenMiddleware, login);
+router.post("/novo-login", csrfGerarRecuperarTokenMiddleware, novoLogin);
+router.post("/atualizar-iptu", csrfTokenMiddleware, authMiddleware([1, 2]), atualizarIptu);
+router.get("/iptu-por-usuario", csrfTokenMiddleware, authMiddleware([1, 2]), getIptuPorIdUsuario);
+router.get("/payload-usuario",  authMiddleware, csrfGerarRecuperarTokenMiddleware, payloadUsuario);
+router.get("/codigo-qr-ou-barra", csrfTokenMiddleware, authMiddleware, getQRCodeOrCodBarras);
+router.get("/iptus", csrfTokenMiddleware, authMiddleware([1, 2]), getIptus);
 
 export default router;
