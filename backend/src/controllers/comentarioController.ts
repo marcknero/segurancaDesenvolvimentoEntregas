@@ -9,11 +9,16 @@ export const criarComentario = async (
     res: Response
 ) => {
 
-    const {
-        texto,
-        usuarioId
-    } = req.body;
+    // O texto vem do corpo da requisição e é higienizado antes de ser salvo.
+    // O ID é obtido do payload autenticado para evitar que o cliente publique em nome de outro usuário.
+    const { texto } = req.body;
+    const usuarioId = res.locals.payload.id;
+
+    // A função xss remove ou neutraliza marcações perigosas contra XSS armazenado.
     let textoLimpo = xss(texto);
+
+    // Os valores são enviados separadamente no segundo argumento de db.query.
+    // Os placeholders $1 e $2 evitam concatenar dados do usuário na SQL.
     const query =
         `INSERT INTO comentario (texto, usuario_id)
          VALUES ($1, $2)`;
@@ -23,7 +28,7 @@ export const criarComentario = async (
 
     try {
 
-        await db.query(query, [texto, usuarioId]);
+        await db.query(query, [textoLimpo, usuarioId]);
 
         res.status(201).json({
             message: "Comentário criado"
@@ -43,6 +48,8 @@ export const listarComentarios = async (
     res: Response
 ) => {
 
+    // Esta consulta não recebe valores externos; os comentários são retornados após
+    // a autenticação e as regras de acesso definidas na rota.
     try {
 
         const result = await db.query(

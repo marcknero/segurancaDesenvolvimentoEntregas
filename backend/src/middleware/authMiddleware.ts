@@ -3,28 +3,34 @@ import ValidarToken from "../Services/jwtServices";
 
 export const authMiddleware = (perfis: number[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
+        // O JWT é lido do cookie HttpOnly, reduzindo a exposição ao JavaScript da página.
         const token = req.cookies.token;
         if (!token) {
-            res.status(401).json({
+            return res.status(401).json({
                 success: false,
                 message: "Token não fornecido"
             });
-            return;
+            
         }
+
+        // A assinatura e o conteúdo do token são conferidos antes de liberar a rota.
         const payload = ValidarToken(token);
 
-        if (!payload)
-            res.status(401).json({
+        if (!payload){
+            return res.status(401).json({
                 success: false,
                 message: "Token inválido"
             });
-        if (perfis && payload && !perfis.includes(payload.tipo)) {
-            res.status(403).json({
+        }
+        if (perfis.length > 0 && payload && !perfis.includes(payload.tipo)) {
+            // Quando há perfis informados, somente eles podem continuar.
+            return res.status(403).json({
                 success: false,
                 message: "Acesso não autorizado"
             });
-            return;
         }
+
+        // res.locals transporta a identidade validada para os controllers.
         res.locals.payload = payload;
         next();
     };

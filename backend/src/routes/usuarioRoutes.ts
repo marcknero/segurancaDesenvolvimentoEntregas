@@ -6,12 +6,15 @@ import { csrfGerarTokenMiddleware as csrfGerarRecuperarTokenMiddleware } from ".
 
 const router = Router();
 
+// Login e cadastro inicializam ou recuperam o token CSRF antes do controller.
 router.post("/login", csrfGerarRecuperarTokenMiddleware, login);
 router.post("/novo-login", csrfGerarRecuperarTokenMiddleware, novoLogin);
+
+// Operações protegidas exigem CSRF e autenticação; os perfis restringem o acesso.
 router.post("/atualizar-iptu", csrfTokenMiddleware, authMiddleware([1, 2]), atualizarIptu);
 router.get("/iptu-por-usuario", csrfTokenMiddleware, authMiddleware([1, 2]), getIptuPorIdUsuario);
-router.get("/payload-usuario",  authMiddleware, csrfGerarRecuperarTokenMiddleware, payloadUsuario);
-router.get("/codigo-qr-ou-barra", csrfTokenMiddleware, authMiddleware, getQRCodeOrCodBarras);
+router.get("/payload-usuario",  authMiddleware([]), csrfGerarRecuperarTokenMiddleware, payloadUsuario);
+router.get("/codigo-qr-ou-barra", csrfTokenMiddleware, authMiddleware([]), getQRCodeOrCodBarras);
 router.get("/iptus", csrfTokenMiddleware, authMiddleware([1, 2]), getIptus);
 
 export default router;

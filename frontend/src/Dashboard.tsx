@@ -42,6 +42,7 @@ function Dashboard() {
     const buscarDados = async () => {
 
       try {
+        // O cookie JWT é enviado ao backend para identificar o usuário autenticado.
         const response = await axios.get(
           "/usuario/payload-usuario",
           { withCredentials: true }
@@ -53,6 +54,7 @@ function Dashboard() {
         }
 
         setUser(response.data.payload);
+        // O token CSRF recebido será enviado no header das operações protegidas.
         setTokenCsrf(response.data.cryptoToken);
 
         const responseIptu = await axios.get<{ iptu: Iptuu[] }>(
@@ -102,15 +104,20 @@ function Dashboard() {
 
     try {
 
+      // O token CSRF acompanha o cookie no header para dificultar requisições forjadas.
+      // withCredentials garante o envio dos cookies de autenticação e CSRF.
       await axios.post(
         "/comentario",
         
         {
-          headers: {
-            "X-CSRF-Token": tokenCsrf
-        },
           texto: novoComentario
+        }, 
+        {
+          withCredentials: true,
+            headers: {
+            "x-csrf-token": tokenCsrf
         }
+      }
       );
 
 
@@ -134,6 +141,7 @@ function Dashboard() {
 
   const buscarCodigo = async () => {
 
+    // O tipo selecionado é enviado como parâmetro para o backend gerar o código solicitado.
     const response = await axios.get(
       "usuario/codigo-qr-ou-barra?tipo=" + tipoCodigo
     );
@@ -228,6 +236,8 @@ function Dashboard() {
 
       {htmlRetorno && (
 
+        // O backend retorna HTML pronto para esta tela; este ponto deve ser tratado
+        // com cuidado porque HTML vindo de entrada externa pode causar XSS.
         <div
           dangerouslySetInnerHTML={{
             __html: htmlRetorno,
@@ -359,4 +369,3 @@ const styles = {
 
 
 export default Dashboard;
-

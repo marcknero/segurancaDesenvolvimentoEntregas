@@ -15,6 +15,8 @@ function Login() {
         e.preventDefault();
 
         try {
+            // As credenciais são enviadas ao backend, que valida o usuário e cria o cookie JWT.
+            // withCredentials permite que o navegador envie e receba cookies na requisição.
             const response = await axios.post(
                 "/usuario/login",
                 { email, password }, {withCredentials: true}
@@ -39,7 +41,7 @@ function Login() {
         e.preventDefault();
 
         try {
-            
+            // O cadastro usa os dados do formulário; a validação definitiva deve ocorrer no backend.
             const response = await axios.post(
                 "/usuario/novo-login",
                 { email, password, nome }

@@ -26,9 +26,10 @@ function Gerenciamento() {
 
       try {
 
+        // O cookie JWT identifica o usuário; o token CSRF é enviado no header.
         const responsePayload = await axios.get(
           "/usuario/payload-usuario",
-          { withCredentials: true }
+          { withCredentials: true, headers: {"x-csrf-token": tokenCsrf} }
         );
 
         if (!responsePayload.data.success) {
@@ -42,12 +43,13 @@ function Gerenciamento() {
         }
 
         setUser(responsePayload.data.payload);
+        // O token será reutilizado nas consultas e atualizações protegidas.
         setTokenCsrf(responsePayload.data.cryptoToken);
 
         const response = await axios.get<{
           iptu: Iptuu[]
         }>(
-          "/usuario/iptus"
+          "/usuario/iptus", {withCredentials: true, headers: {"x-csrf-token": tokenCsrf}}
         );
 
         setIptus(response.data.iptu);
@@ -79,15 +81,20 @@ function Gerenciamento() {
   ) => {
 
     try {
+      // O corpo contém os dados da atualização e o header leva o token CSRF.
+      // O backend ainda deve confirmar se o usuário tem autorização para este ID.
       await axios.post(
         "/usuario/atualizar-iptu",
-        {
-          headers: {
-            "X-CSRF-Token": tokenCsrf
-        },
+      {
           usuarioId: usuarioId,
           novoValor: novoValor[usuarioId]
-        }, {withCredentials: true}
+        },
+         {
+          withCredentials:true,
+          headers: {
+            "x-csrf-token": tokenCsrf
+        }
+      }
       );
 
 
@@ -98,7 +105,7 @@ function Gerenciamento() {
       const response = await axios.get<{
         iptu: Iptuu[]
       }>(
-        "/usuario/iptus"
+        "/usuario/iptus",{withCredentials: true, headers: {"x-csrf-token": tokenCsrf}}
       );
 
       setIptus(response.data.iptu);
