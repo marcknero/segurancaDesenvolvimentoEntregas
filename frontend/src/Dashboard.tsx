@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Comentario } from "./Tipos/Comentario";
 import type { Iptuu } from "./Tipos/Iptuu";
 import { useNavigate } from "react-router-dom";
+import xss from 'xss';
 
 function Dashboard() {
 
@@ -236,13 +237,12 @@ function Dashboard() {
 
       {htmlRetorno && (
 
-        // O backend retorna HTML pronto para esta tela; este ponto deve ser tratado
-        // com cuidado porque HTML vindo de entrada externa pode causar XSS.
-        <div
-          dangerouslySetInnerHTML={{
-            __html: htmlRetorno,
-          }}
-        />
+        <div>
+          {htmlRetorno}
+        </div>
+
+        // opcionalmente podemos usar um regex para manter apenas o texto legivel
+        //{htmlRetorno.replace(/<[^>]*>?/gm, '')}
 
       )}
 
@@ -306,15 +306,11 @@ function Dashboard() {
 
 
                   {/* 
-                    VULNERÁVEL A STORED XSS
-
-                    O conteúdo vindo do banco é interpretado
-                    como HTML pelo navegador.
+                    corrigido para extração xss, usando a biblioteca xss, 
+                    para extração dos dados salvos sem interação na pagina.
                   */}
-                  {comentario.texto}
-                  <div
-                    
-                  />
+                  {xss(comentario.texto)}
+                  
 
                 </div>
 
