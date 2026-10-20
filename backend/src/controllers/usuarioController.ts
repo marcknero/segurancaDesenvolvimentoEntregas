@@ -42,12 +42,12 @@ export const login = async (req: Request, res: Response) => {
         res.cookie("token", token, { httpOnly: true, sameSite: "strict" });
 
         // Este token é usado como prova adicional contra requisições CSRF.
-        // const csrfToken = crypto.randomBytes(32).toString("hex");
+        const csrfToken = crypto.randomBytes(32).toString("hex");
         
-        // res.json({
-        //     success: true,
-        //     cryptoToken: csrfToken
-        // });
+        res.json({
+            success: true,
+            cryptoToken: csrfToken
+        });
 
     } else {
         res.status(401).json({
